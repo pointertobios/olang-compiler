@@ -13,13 +13,11 @@ cmake .. && make -j$(nproc)
 
 ```bash
 cd build
-./olc ../examples/tui_app.olang -o ../examples/build/tui_app.o
+./olc ../examples/src/snake.olang -o ../examples/build/snake.o
 cd ..
-./olang-link ./examples/build/tui_app ./examples/build/tui_app.o -lncurses
+./olang-link ./examples/build/snake ./examples/build/snake.o -lncurses -lc
 
-# For better experience with colors:
-export TERM=xterm-256color
-./examples/build/tui_app
+./example/build/snake
 ```
 
 **Controls**: ↑↓←→ arrow keys to move, q to quit
@@ -27,9 +25,15 @@ export TERM=xterm-256color
 ## Compiler (olc)
 
 ```bash
-./olc <file.olang>              # Generate .o
-./olc <file.olang> --emit-llvm  # Generate .ll
-./olc <file.olang> --print-ir   # Print IR
+Usage: ./build/olc <input_file> [options]
+Options:
+  --emit-llvm       Generate LLVM IR (.ll)
+  -o <output>       Specify output file
+  --target <triple> Specify target triple
+  --print-ir        Print LLVM IR to stdout
+
+Default: Generate object file (.o)
+Linking: Use ld.lld or clang to link .o files
 ```
 
 ## Linker
