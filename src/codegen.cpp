@@ -145,17 +145,21 @@ llvm::Value* ExternDecl::codegen(CodeGenContext& ctx) {
 }
 
 llvm::Value* LetStmt::codegen(CodeGenContext& ctx) {
-    llvm::Value* value = this->value->codegen(ctx);
-    llvm::AllocaInst* alloca = ctx.createAlloca(name, ctx.getLLVMType(type));
+    llvm::Type* llvm_type = ctx.getLLVMType(type);
+    llvm::AllocaInst* alloca = ctx.createAlloca(name, llvm_type);
     
-    // If value is nullptr (e.g., struct/array literal), use zero initialization
+    // For arrays and structs, always use zero initialization
+    // (initializer expression is just a placeholder in Olang syntax)
+    if (llvm_type->isStructTy() || llvm_type->isArrayTy()) {
+        llvm::Value* zero_init = llvm::ConstantAggregateZero::get(llvm_type);
+        ctx.getBuilder().CreateStore(zero_init, alloca);
+        return alloca;
+    }
+    
+    // For scalar types, evaluate and store the value
+    llvm::Value* value = this->value->codegen(ctx);
     if (!value) {
-        llvm::Type* llvm_type = ctx.getLLVMType(type);
-        if (llvm_type->isStructTy() || llvm_type->isArrayTy()) {
-            value = llvm::ConstantAggregateZero::get(llvm_type);
-        } else {
-            return nullptr; // Error
-        }
+        return nullptr; // Error
     }
     
     ctx.getBuilder().CreateStore(value, alloca);
@@ -378,12 +382,113 @@ llvm::Value* AssignmentExpr::codegen(CodeGenContext& ctx) {
         return nullptr;
     }
     
-    // Get address of left value
+    // Handle simple variable assignment: x = value
     if (auto ident = dynamic_cast<Identifier*>(left.get())) {
         llvm::AllocaInst* alloca = ctx.getAlloca(ident->name);
         if (alloca) {
             ctx.getBuilder().CreateStore(right_value, alloca);
-            return right_value;  // Assignment expression value is the right value
+            return right_value;
+        }
+    }
+    
+    // Handle array element assignment: arr[i] = value
+    if (auto array_access = dynamic_cast<ArrayAccess*>(left.get())) {
+        if (auto ident = dynamic_cast<Identifier*>(array_access->array.get())) {
+            llvm::AllocaInst* alloca = ctx.getAlloca(ident->name);
+            if (alloca) {
+                llvm::Type* array_type = alloca->getAllocatedType();
+                if (array_type->isArrayTy()) {
+                    llvm::Value* index_value = array_access->index->codegen(ctx);
+                    
+                    // Create GEP to get element pointer
+                    std::vector<llvm::Value*> indices;
+                    indices.push_back(llvm::ConstantInt::get(ctx.getContext(), llvm::APInt(32, 0)));
+                    indices.push_back(index_value);
+                    
+                    llvm::Value* element_ptr = ctx.getBuilder().CreateGEP(
+                        array_type, alloca, indices, "arrayidx"
+                    );
+                    
+                    // Store value to array element
+                    ctx.getBuilder().CreateStore(right_value, element_ptr);
+                    return right_value;
+                }
+            }
+        }
+    }
+    
+    // Handle struct member assignment: obj.member = value
+    if (auto member_access = dynamic_cast<MemberAccess*>(left.get())) {
+        if (auto ident = dynamic_cast<Identifier*>(member_access->object.get())) {
+            llvm::AllocaInst* alloca = ctx.getAlloca(ident->name);
+            if (alloca) {
+                llvm::Type* struct_type = alloca->getAllocatedType();
+                if (struct_type->isStructTy()) {
+                    llvm::StructType* llvm_struct = llvm::cast<llvm::StructType>(struct_type);
+                    
+                    // Find member index
+                    unsigned member_idx = 0;
+                    if (member_access->member == "x") member_idx = 0;
+                    else if (member_access->member == "y") member_idx = 1;
+                    else if (member_access->member == "z") member_idx = 2;
+                    else return nullptr;
+                    
+                    // Get member pointer using GEP
+                    llvm::Value* member_ptr = ctx.getBuilder().CreateStructGEP(
+                        llvm_struct, alloca, member_idx, member_access->member
+                    );
+                    
+                    // Store value to member
+                    ctx.getBuilder().CreateStore(right_value, member_ptr);
+                    return right_value;
+                }
+            }
+        }
+        
+        // Handle arr[i].member = value
+        if (auto array_access = dynamic_cast<ArrayAccess*>(member_access->object.get())) {
+            if (auto ident = dynamic_cast<Identifier*>(array_access->array.get())) {
+                llvm::AllocaInst* alloca = ctx.getAlloca(ident->name);
+                if (alloca) {
+                    llvm::Type* array_type = alloca->getAllocatedType();
+                    if (array_type->isArrayTy()) {
+                        llvm::Value* index_value = array_access->index->codegen(ctx);
+                        
+                        // Get array element pointer
+                        std::vector<llvm::Value*> indices;
+                        indices.push_back(llvm::ConstantInt::get(ctx.getContext(), llvm::APInt(32, 0)));
+                        indices.push_back(index_value);
+                        
+                        llvm::Value* element_ptr = ctx.getBuilder().CreateGEP(
+                            array_type, alloca, indices, "arrayidx"
+                        );
+                        
+                        // Get element type (should be struct)
+                        llvm::ArrayType* arr_type = llvm::cast<llvm::ArrayType>(array_type);
+                        llvm::Type* element_type = arr_type->getElementType();
+                        
+                        if (element_type->isStructTy()) {
+                            llvm::StructType* llvm_struct = llvm::cast<llvm::StructType>(element_type);
+                            
+                            // Find member index
+                            unsigned member_idx = 0;
+                            if (member_access->member == "x") member_idx = 0;
+                            else if (member_access->member == "y") member_idx = 1;
+                            else if (member_access->member == "z") member_idx = 2;
+                            else return nullptr;
+                            
+                            // Get member pointer from array element
+                            llvm::Value* member_ptr = ctx.getBuilder().CreateStructGEP(
+                                llvm_struct, element_ptr, member_idx, member_access->member
+                            );
+                            
+                            // Store value to member
+                            ctx.getBuilder().CreateStore(right_value, member_ptr);
+                            return right_value;
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -443,7 +548,7 @@ llvm::Value* CallExpr::codegen(CodeGenContext& ctx) {
 }
 
 llvm::Value* MemberAccess::codegen(CodeGenContext& ctx) {
-    // Special handling: if object is Identifier, get its alloca pointer instead of loaded value
+    // Handle simple struct variable: obj.member
     if (auto ident = dynamic_cast<Identifier*>(object.get())) {
         llvm::AllocaInst* alloca = ctx.getAlloca(ident->name);
         if (alloca) {
@@ -475,6 +580,52 @@ llvm::Value* MemberAccess::codegen(CodeGenContext& ctx) {
             else return nullptr;
             
             return ctx.getBuilder().CreateExtractValue(param_value, member_idx, member);
+        }
+    }
+    
+    // Handle array element member: arr[i].member
+    if (auto array_access = dynamic_cast<ArrayAccess*>(object.get())) {
+        if (auto ident = dynamic_cast<Identifier*>(array_access->array.get())) {
+            llvm::AllocaInst* alloca = ctx.getAlloca(ident->name);
+            if (alloca) {
+                llvm::Type* array_type = alloca->getAllocatedType();
+                if (array_type->isArrayTy()) {
+                    llvm::Value* index_value = array_access->index->codegen(ctx);
+                    
+                    // Get array element pointer
+                    std::vector<llvm::Value*> indices;
+                    indices.push_back(llvm::ConstantInt::get(ctx.getContext(), llvm::APInt(32, 0)));
+                    indices.push_back(index_value);
+                    
+                    llvm::Value* element_ptr = ctx.getBuilder().CreateGEP(
+                        array_type, alloca, indices, "arrayidx"
+                    );
+                    
+                    // Get element type (should be struct)
+                    llvm::ArrayType* arr_type = llvm::cast<llvm::ArrayType>(array_type);
+                    llvm::Type* element_type = arr_type->getElementType();
+                    
+                    if (element_type->isStructTy()) {
+                        llvm::StructType* llvm_struct = llvm::cast<llvm::StructType>(element_type);
+                        
+                        // Find member index
+                        unsigned member_idx = 0;
+                        if (member == "x") member_idx = 0;
+                        else if (member == "y") member_idx = 1;
+                        else if (member == "z") member_idx = 2;
+                        else return nullptr;
+                        
+                        // Get member pointer from array element
+                        llvm::Value* member_ptr = ctx.getBuilder().CreateStructGEP(
+                            llvm_struct, element_ptr, member_idx, member
+                        );
+                        
+                        // Load member value
+                        llvm::Type* member_type = llvm_struct->getElementType(member_idx);
+                        return ctx.getBuilder().CreateLoad(member_type, member_ptr, member);
+                    }
+                }
+            }
         }
     }
     

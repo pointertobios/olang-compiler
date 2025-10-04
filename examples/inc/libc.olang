@@ -1,0 +1,55 @@
+// Standard C library
+
+// I/O functions
+extern fn printf(fmt: *i8) -> i32;
+extern fn puts(s: *i8) -> i32;
+extern fn putchar(c: i32) -> i32;
+extern fn getchar() -> i32;
+
+// Memory management
+extern fn malloc(size: i64) -> *i8;
+extern fn calloc(nmemb: i64, size: i64) -> *i8;
+extern fn realloc(p: *i8, size: i64) -> *i8;
+extern fn free(p: *i8) -> i32;
+extern fn memset(p: *i8, value: i32, size: i64) -> *i8;
+extern fn memcpy(dest: *i8, src: *i8, size: i64) -> *i8;
+extern fn memmove(dest: *i8, src: *i8, size: i64) -> *i8;
+extern fn memcmp(s1: *i8, s2: *i8, size: i64) -> i32;
+
+// String functions
+extern fn strlen(s: *i8) -> i64;
+extern fn strcmp(s1: *i8, s2: *i8) -> i32;
+extern fn strncmp(s1: *i8, s2: *i8, n: i64) -> i32;
+extern fn strcpy(dest: *i8, src: *i8) -> *i8;
+extern fn strncpy(dest: *i8, src: *i8, n: i64) -> *i8;
+extern fn strcat(dest: *i8, src: *i8) -> *i8;
+extern fn strncat(dest: *i8, src: *i8, n: i64) -> *i8;
+extern fn strchr(s: *i8, c: i32) -> *i8;
+extern fn strrchr(s: *i8, c: i32) -> *i8;
+extern fn strstr(haystack: *i8, needle: *i8) -> *i8;
+
+// Conversion functions
+extern fn atoi(s: *i8) -> i32;
+extern fn atol(s: *i8) -> i64;
+extern fn atof(s: *i8) -> f64;
+
+// Random numbers
+extern fn rand() -> i32;
+extern fn srand(seed: i32) -> i32;
+
+// Process control
+extern fn exit(code: i32) -> i32;
+extern fn abort() -> i32;
+
+// File I/O (FILE* as *i8)
+extern fn fopen(filename: *i8, mode: *i8) -> *i8;
+extern fn fclose(stream: *i8) -> i32;
+extern fn fread(p: *i8, size: i64, nmemb: i64, stream: *i8) -> i64;
+extern fn fwrite(p: *i8, size: i64, nmemb: i64, stream: *i8) -> i64;
+extern fn fgetc(stream: *i8) -> i32;
+extern fn fputc(c: i32, stream: *i8) -> i32;
+extern fn fgets(s: *i8, size: i32, stream: *i8) -> *i8;
+extern fn fputs(s: *i8, stream: *i8) -> i32;
+
+// Time functions
+extern fn time(t: *i64) -> i64;

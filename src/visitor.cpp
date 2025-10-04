@@ -9,7 +9,10 @@ std::any ASTVisitor::visitProgram(OlangParser::ProgramContext *ctx) {
     auto program = std::make_unique<Program>();
     
     for (auto decl : ctx->children) {
-        if (auto struct_decl = dynamic_cast<OlangParser::Struct_declContext*>(decl)) {
+        if (auto include_stmt = dynamic_cast<OlangParser::Include_stmtContext*>(decl)) {
+            // Skip include statements (handled by preprocessor in main.cpp)
+            continue;
+        } else if (auto struct_decl = dynamic_cast<OlangParser::Struct_declContext*>(decl)) {
             visitStruct_decl(struct_decl);
             program->declarations.push_back(popNode());
         } else if (auto func_decl = dynamic_cast<OlangParser::Function_declContext*>(decl)) {
@@ -387,14 +390,14 @@ std::any ASTVisitor::visitMultiplicative_expr(OlangParser::Multiplicative_exprCo
 }
 
 std::any ASTVisitor::visitUnary_expr(OlangParser::Unary_exprContext *ctx) {
-    if (ctx->NOT() || ctx->MINUS() || ctx->POINTER() || ctx->AMPERSAND()) {
+    if (ctx->NOT() || ctx->MINUS() || ctx->MULTIPLY() || ctx->AMPERSAND()) {
         visit(ctx->unary_expr());
         auto operand = popNode();
         
         UnaryExpr::Op op = UnaryExpr::NOT; // Default
         if (ctx->NOT()) op = UnaryExpr::NOT;
         else if (ctx->MINUS()) op = UnaryExpr::NEG;
-        else if (ctx->POINTER()) op = UnaryExpr::DEREF;
+        else if (ctx->MULTIPLY()) op = UnaryExpr::DEREF;
         else if (ctx->AMPERSAND()) op = UnaryExpr::ADDR;
         
         auto unary_expr = std::make_unique<UnaryExpr>(
@@ -563,7 +566,7 @@ UnaryExpr::Op ASTVisitor::getUnaryOp(antlr4::Token* token) {
     switch (token->getType()) {
         case OlangParser::NOT: return UnaryExpr::NOT;
         case OlangParser::MINUS: return UnaryExpr::NEG;
-        case OlangParser::POINTER: return UnaryExpr::DEREF;
+        case OlangParser::MULTIPLY: return UnaryExpr::DEREF;
         case OlangParser::AMPERSAND: return UnaryExpr::ADDR;
         default: throw std::runtime_error("Unknown unary operator");
     }

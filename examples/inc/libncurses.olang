@@ -1,0 +1,13 @@
+// ncurses library
+extern fn initscr() -> i32;
+extern fn endwin() -> i32;
+extern fn refresh() -> i32;
+extern fn clear() -> i32;
+extern fn cbreak() -> i32;
+extern fn noecho() -> i32;
+extern fn getch() -> i32;
+extern fn timeout(delay: i32) -> i32;
+extern fn mvaddch(y: i32, x: i32, ch: i32) -> i32;
+extern fn move(y: i32, x: i32) -> i32;
+extern fn addch(ch: i32) -> i32;
+

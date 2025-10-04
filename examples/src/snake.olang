@@ -1,0 +1,196 @@
+// Snake Game
+include "../inc/libncurses.olang";
+include "../inc/libc.olang";
+
+struct Point {
+    x: i32;
+    y: i32;
+}
+
+export fn main() -> i32 {
+    let snake: array [100] Point = 0;
+    let snake_len: i32 = 3;
+    let food: Point = 0;
+    let dir: i32 = 0;
+    let running: i32 = 1;
+    let score: i32 = 0;
+    let key: i32 = 0;
+    let key2: i32 = 0;
+    let key3: i32 = 0;
+    let new_x: i32 = 0;
+    let new_y: i32 = 0;
+    let i: i32 = 0;
+    let j: i32 = 0;
+    let tens: i32 = 0;
+    let ones: i32 = 0;
+    let r: i32 = 0;
+    
+    snake[0].x = 15;
+    snake[0].y = 14;
+    snake[1].x = 14;
+    snake[1].y = 14;
+    snake[2].x = 13;
+    snake[2].y = 14;
+    
+    srand(42);
+    r = rand();
+    food.x = r % 27 + 1;
+    r = rand();
+    food.y = r % 25 + 1;
+    
+    initscr();
+    cbreak();
+    noecho();
+    timeout(200);
+    
+    while (running == 1) {
+        clear();
+        
+        i = 0;
+        while (i < 60) {
+            mvaddch(0, i, 35);
+            mvaddch(29, i, 35);
+            i = i + 1;
+        }
+        i = 1;
+        while (i < 29) {
+            mvaddch(i, 0, 35);
+            mvaddch(i, 59, 35);
+            i = i + 1;
+        }
+        
+        mvaddch(food.y, food.x * 2, 88);
+        
+        i = 0;
+        while (i < snake_len) {
+            if (i == 0) {
+                mvaddch(snake[i].y, snake[i].x * 2, 64);
+            }
+            if (i > 0) {
+                mvaddch(snake[i].y, snake[i].x * 2, 42);
+            }
+            i = i + 1;
+        }
+        
+        tens = score / 10;
+        ones = score - tens * 10;
+        move(0, 62);
+        addch(83);
+        addch(58);
+        if (tens > 0) {
+            addch(48 + tens);
+        }
+        addch(48 + ones);
+        
+        refresh();
+        
+        key = getch();
+        if (key == 113) {
+            running = 0;
+        }
+        
+        if (key == 27) {
+            key2 = getch();
+            if (key2 == 91) {
+                key3 = getch();
+                if (key3 == 65 && dir != 1) {
+                    dir = 3;
+                }
+                if (key3 == 66 && dir != 3) {
+                    dir = 1;
+                }
+                if (key3 == 67 && dir != 2) {
+                    dir = 0;
+                }
+                if (key3 == 68 && dir != 0) {
+                    dir = 2;
+                }
+            }
+        }
+        
+        new_x = snake[0].x;
+        new_y = snake[0].y;
+        
+        if (dir == 0) {
+            new_x = new_x + 1;
+        }
+        if (dir == 1) {
+            new_y = new_y + 1;
+        }
+        if (dir == 2) {
+            new_x = new_x - 1;
+        }
+        if (dir == 3) {
+            new_y = new_y - 1;
+        }
+        
+        if (new_x < 1 || new_x > 29 || new_y < 1 || new_y > 28) {
+            running = 0;
+        }
+        
+        if (running == 1) {
+            j = 1;
+            while (j < snake_len) {
+                if (new_x == snake[j].x && new_y == snake[j].y) {
+                    running = 0;
+                }
+                j = j + 1;
+            }
+        }
+        
+        if (new_x == food.x && new_y == food.y) {
+            score = score + 1;
+            if (snake_len < 99) {
+                snake_len = snake_len + 1;
+            }
+            
+            r = rand();
+            food.x = r % 27 + 1;
+            r = rand();
+            food.y = r % 25 + 1;
+        }
+        
+        if (running == 1) {
+            j = snake_len - 1;
+            while (j > 0) {
+                snake[j].x = snake[j - 1].x;
+                snake[j].y = snake[j - 1].y;
+                j = j - 1;
+            }
+            snake[0].x = new_x;
+            snake[0].y = new_y;
+        }
+    }
+    
+    clear();
+    move(10, 20);
+    addch(71);
+    addch(97);
+    addch(109);
+    addch(101);
+    addch(32);
+    addch(79);
+    addch(118);
+    addch(101);
+    addch(114);
+    addch(33);
+    tens = score / 10;
+    ones = score - tens * 10;
+    move(12, 20);
+    addch(83);
+    addch(99);
+    addch(111);
+    addch(114);
+    addch(101);
+    addch(58);
+    addch(32);
+    if (tens > 0) {
+        addch(48 + tens);
+    }
+    addch(48 + ones);
+    refresh();
+    timeout(-1);
+    getch();
+    endwin();
+    return score;
+}

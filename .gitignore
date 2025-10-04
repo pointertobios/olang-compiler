@@ -7,4 +7,5 @@ generated/
 # ANTLR downloaded tool
 antlr-4.13.2-complete.jar
 
-
+# Build output
+examples/build/

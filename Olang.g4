@@ -19,6 +19,7 @@ TRUE : 'true' ;
 FALSE : 'false' ;
 EXTERN : 'extern' ;
 EXPORT : 'export' ;
+INCLUDE : 'include' ;
 
 // Type keywords
 I1 : 'i1' ;
@@ -68,7 +69,9 @@ ARROW : '->' ;
 AMPERSAND : '&' ;
 
 // Parser rules
-program : (struct_decl | function_decl | global_var_decl | extern_decl)* EOF ;
+program : (include_stmt | struct_decl | function_decl | global_var_decl | extern_decl)* EOF ;
+
+include_stmt : INCLUDE STRING_LITERAL SEMICOLON ;
 
 struct_decl : STRUCT IDENTIFIER LBRACE struct_field* RBRACE ;
 
@@ -82,7 +85,7 @@ type_spec : basic_type
 
 basic_type : I1 | I8 | I16 | I32 | I64 | F16 | F32 | F64 ;
 
-pointer_type : POINTER type_spec ;
+pointer_type : MULTIPLY type_spec ;
 
 array_type : ARRAY LBRACKET INT_LITERAL RBRACKET type_spec ;
 
@@ -134,7 +137,7 @@ additive_expr : multiplicative_expr ((PLUS | MINUS) multiplicative_expr)* ;
 
 multiplicative_expr : unary_expr ((MULTIPLY | DIVIDE | MODULO) unary_expr)* ;
 
-unary_expr : (NOT | MINUS | POINTER | AMPERSAND) unary_expr
+unary_expr : (NOT | MINUS | MULTIPLY | AMPERSAND) unary_expr
            | postfix_expr
            ;
 

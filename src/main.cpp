@@ -5,8 +5,73 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <set>
+#include <filesystem>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/IR/Module.h>
+
+namespace fs = std::filesystem;
+
+// Process includes recursively
+std::string processIncludes(const std::string& filename, std::set<std::string>& included_files) {
+    // Get canonical path to avoid duplicate includes
+    std::string canonical_path = fs::canonical(filename).string();
+    
+    // Check if already included
+    if (included_files.count(canonical_path) > 0) {
+        return "";  // Already included, skip
+    }
+    included_files.insert(canonical_path);
+    
+    // Read file
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open file " << filename << std::endl;
+        return "";
+    }
+    
+    std::string content((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+    file.close();
+    
+    // Get directory of current file
+    fs::path file_path(filename);
+    fs::path file_dir = file_path.parent_path();
+    
+    // Process includes
+    std::string result;
+    size_t pos = 0;
+    while ((pos = content.find("include \"", pos)) != std::string::npos) {
+        // Find end of include statement
+        size_t quote_start = pos + 9;  // After 'include "'
+        size_t quote_end = content.find("\"", quote_start);
+        if (quote_end == std::string::npos) break;
+        
+        std::string include_file = content.substr(quote_start, quote_end - quote_start);
+        
+        // Resolve relative path
+        fs::path include_path = file_dir / include_file;
+        
+        // Recursively process included file
+        std::string included_content = processIncludes(include_path.string(), included_files);
+        
+        // Replace include statement with file content
+        size_t semicolon = content.find(";", quote_end);
+        if (semicolon != std::string::npos) {
+            result += content.substr(0, pos);
+            result += "// Included from: " + include_file + "\n";
+            result += included_content;
+            result += "\n// End of: " + include_file + "\n";
+            content = content.substr(semicolon + 1);
+            pos = 0;
+        } else {
+            pos = quote_end;
+        }
+    }
+    
+    result += content;
+    return result;
+}
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -51,16 +116,15 @@ int main(int argc, char* argv[]) {
             output_file = base + ".o";  // Default: generate .o
         }
     }
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Cannot open file " << filename << std::endl;
+    
+    // Process includes
+    std::set<std::string> included_files;
+    std::string input = processIncludes(filename, included_files);
+    
+    if (input.empty()) {
+        std::cerr << "Error: Failed to read input file" << std::endl;
         return 1;
     }
-    
-    // Read file content
-    std::string input((std::istreambuf_iterator<char>(file)),
-                      std::istreambuf_iterator<char>());
-    file.close();
     
     try {
         // Create ANTLR input stream

@@ -9,17 +9,20 @@ mkdir build && cd build
 cmake .. && make -j$(nproc)
 ```
 
-## TUI Example
+## Snake Game Example
 
 ```bash
 cd build
 ./olc ../examples/tui_app.olang -o ../examples/build/tui_app.o
 cd ..
 ./olang-link ./examples/build/tui_app ./examples/build/tui_app.o -lncurses
+
+# For better experience with colors:
+export TERM=xterm-256color
 ./examples/build/tui_app
 ```
 
-**Controls**: ↑↓ arrow keys to select, Enter to confirm, q to quit
+**Controls**: ↑↓←→ arrow keys to move, q to quit
 
 ## Compiler (olc)
 

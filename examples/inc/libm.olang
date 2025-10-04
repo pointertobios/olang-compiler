@@ -1,0 +1,18 @@
+// Math library functions
+extern fn sin(x: f64) -> f64;
+extern fn cos(x: f64) -> f64;
+extern fn tan(x: f64) -> f64;
+extern fn asin(x: f64) -> f64;
+extern fn acos(x: f64) -> f64;
+extern fn atan(x: f64) -> f64;
+extern fn atan2(y: f64, x: f64) -> f64;
+extern fn sqrt(x: f64) -> f64;
+extern fn pow(base: f64, exp: f64) -> f64;
+extern fn exp(x: f64) -> f64;
+extern fn log(x: f64) -> f64;
+extern fn log10(x: f64) -> f64;
+extern fn floor(x: f64) -> f64;
+extern fn ceil(x: f64) -> f64;
+extern fn fabs(x: f64) -> f64;
+extern fn fmod(x: f64, y: f64) -> f64;
+
