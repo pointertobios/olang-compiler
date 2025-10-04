@@ -1,0 +1,10 @@
+# Build directories
+build/
+
+# Generated files
+generated/
+
+# ANTLR downloaded tool
+antlr-4.13.2-complete.jar
+
+
