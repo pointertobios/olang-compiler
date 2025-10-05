@@ -37,7 +37,7 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-# Add LLVM libraries (with components needed for target code generation)
+# Map LLVM components for non-monolithic builds
 llvm_map_components_to_libnames(llvm_libs 
     support core irreader
     x86codegen x86asmparser x86desc x86info
@@ -73,12 +73,28 @@ include_directories(${GENERATED_DIR})
 # Create executable
 add_executable(olc ${COMPILER_SOURCES})
 
-# Link ANTLR4 runtime and LLVM libraries
-target_link_libraries(olc 
-    PRIVATE 
-    antlr4_static      # ANTLR4 static library (downloaded from network)
-    ${llvm_libs}       # LLVM libraries
-)
+# Ensure the linker can find LLVM libraries
+if(DEFINED LLVM_LIBRARY_DIRS)
+    # Modern CMake prefers target_link_directories over link_directories
+    target_link_directories(olc PRIVATE ${LLVM_LIBRARY_DIRS})
+elseif(DEFINED LLVM_LIBRARY_DIR)
+    target_link_directories(olc PRIVATE ${LLVM_LIBRARY_DIR})
+endif()
+
+# Link ANTLR4 runtime and LLVM (support both monolithic and component builds)
+if(TARGET LLVM::LLVM)
+    # Preferred: imported CMake target provided by LLVM package
+    target_link_libraries(olc PRIVATE antlr4_static LLVM::LLVM)
+elseif(TARGET LLVM)
+    # Some distros export a plain 'LLVM' target
+    target_link_libraries(olc PRIVATE antlr4_static LLVM)
+elseif(LLVM_LINK_LLVM_DYLIB)
+    # LLVM built as a single shared library (libLLVM)
+    target_link_libraries(olc PRIVATE antlr4_static LLVM)
+else()
+    # LLVM built with individual component libraries
+    target_link_libraries(olc PRIVATE antlr4_static ${llvm_libs})
+endif()
 
 # Add compile options
 target_compile_options(olc PRIVATE -Wall -Wextra)

@@ -6,7 +6,7 @@
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <output> <input.o> [input2.o ...] [library options]"
     echo "Example: $0 program main.o lib.o"
-    echo "Example: $0 program main.o -lncurses"
+    echo "Example: $0 program main.o -lc -lncurses"
     exit 1
 fi
 
@@ -14,16 +14,43 @@ OUTPUT="$1"
 shift
 INPUTS="$@"
 
+CRT1=/usr/lib/x86_64-linux-gnu/crt1.o
+if [[ -f $CRT1 ]]; then
+    echo > /dev/null
+else
+    CRT1=/usr/lib/crt1.o
+fi
+
+CRTI=/usr/lib/x86_64-linux-gnu/crti.o
+if [[ -f $CRTI ]]; then
+    echo > /dev/null
+else
+    CRTI=/usr/lib/crti.o
+fi
+
+CRTN=/usr/lib/x86_64-linux-gnu/crtn.o
+if [[ -f $CRTN ]]; then
+    echo > /dev/null
+else
+    CRTN=/usr/lib/crtn.o
+fi
+
+DYNLDSO=/lib64/ld-linux-x86-64.so.2
+if [[ ! -e "$DYNLDSO" ]]; then
+    DYNLDSO=/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+fi
+
 # Link using ld.lld
 ld.lld \
-    -dynamic-linker /lib64/ld-linux-x86-64.so.2 \
-    /usr/lib/x86_64-linux-gnu/crt1.o \
-    /usr/lib/x86_64-linux-gnu/crti.o \
+    -dynamic-linker "$DYNLDSO" \
+    $CRT1 \
+    $CRTI \
     $INPUTS \
-    -lc \
     -L/usr/lib/x86_64-linux-gnu \
     -L/lib/x86_64-linux-gnu \
-    /usr/lib/x86_64-linux-gnu/crtn.o \
+    -L/usr/lib \
+    -L/lib \
+    $CRTN \
     -o "$OUTPUT"
 
 if [ $? -eq 0 ]; then

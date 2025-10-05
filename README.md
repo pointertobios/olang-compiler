@@ -39,7 +39,7 @@ Linking: Use ld.lld or clang to link .o files
 ## Linker
 
 ```bash
-./olang-link <output> <input.o> [-lncurses ...]
+./olang-link <output> <input.o> [-lc ...]
 ```
 
 ## Language Features

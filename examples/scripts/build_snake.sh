@@ -11,6 +11,6 @@ cd "$PROJECT_DIR"
 
 echo "🐍 Building Snake Game..."
 ./build/olc examples/src/snake.olang -o examples/build/snake.o
-./olang-link examples/build/snake examples/build/snake.o -lncurses
+./olang-link examples/build/snake examples/build/snake.o -lc -lncurses
 echo "✅ Done! Run: ./examples/build/snake"
 
